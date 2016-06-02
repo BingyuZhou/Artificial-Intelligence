@@ -1,0 +1,8 @@
+		
+class person:
+	population=0
+	def __init__(self,myage):
+		self.age=myage
+		person.population+=1
+	def get_population(self):
+		return person.population
