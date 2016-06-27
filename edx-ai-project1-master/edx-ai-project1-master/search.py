@@ -78,21 +78,53 @@ def depthFirstSearch(problem):
     return []
 
 def breadthFirstSearch(problem):
-    fringe = util.Queue()
-    fringe.push( (problem.getStartState(), []) )
+    # """Search the shallowest nodes in the search tree first."""
+    # "*** YOUR CODE HERE ***"
+    start=problem.getStartState()
 
-    visited = []
-    while not fringe.isEmpty():
-        node, actions = fringe.pop()
+    currentState=start
+    current=(start,[])
+    rout=[]
+    close=[]
+    queue=util.Queue()
+   
+    while not problem.isGoalState(currentState):
+        if currentState not in close:
+            spring=problem.getSuccessors(currentState)
+            close.append(currentState)
+            if spring:
+                for child in spring:
+                    if child[0] not in close:
+                        child = (child[0],current[1]+[child[1]],child[2])
+                        queue.push(child)
+                current=queue.pop()
+                currentState=current[0]
+            else:
+                current=queue.pop()
+                currentState=current[0]
+        else:
+            current=queue.pop()
+            currentState=current[0]
+    
+    return current[1]
+    util.raiseNotDefined()	
+	
+# def breadthFirstSearch(problem):
+    # fringe = util.Queue()
+    # fringe.push( (problem.getStartState(), []) )
 
-        for coord, direction, steps in problem.getSuccessors(node):
-            if not coord in visited:
-                if problem.isGoalState(coord):
-                    return actions + [direction]
-                fringe.push((coord, actions + [direction]))
-                visited.append(coord)
+    # visited = []
+    # while not fringe.isEmpty():
+        # node, actions = fringe.pop()
 
-    return []
+        # for coord, direction, steps in problem.getSuccessors(node):
+            # if not coord in visited:
+                # if problem.isGoalState(coord):
+                    # return actions + [direction]
+                # fringe.push((coord, actions + [direction]))
+                # visited.append(coord)
+
+    # return []
 
 def uniformCostSearch(problem):
     fringe = util.PriorityQueue()

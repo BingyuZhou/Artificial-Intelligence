@@ -118,8 +118,8 @@ def depthFirstSearch(problem):
     util.raiseNotDefined()
 
 def breadthFirstSearch(problem):
-    """Search the shallowest nodes in the search tree first."""
-    "*** YOUR CODE HERE ***"
+    # """Search the shallowest nodes in the search tree first."""
+    # "*** YOUR CODE HERE ***"
     start=problem.getStartState()
 
     currentState=start
@@ -207,17 +207,14 @@ def aStarSearch(problem, heuristic=nullHeuristic):
     rout=[]
     close=[]
     PQueue=util.PriorityQueue()
-    parentMap={}
-    parentMap[start]=[]
     while not problem.isGoalState(currentState):
     	if currentState not in close:
     		spring=problem.getSuccessors(currentState)
     		close.append(currentState)
     		if spring:
     			for child in spring:
-				child=(child[0],child[1],child[2]+current[2])
+				child=(child[0],current[1]+[child[1]],child[2]+current[2])
     				PQueue.push(child,child[2]+heuristic(child[0],problem))
-    				parentMap[child]=current
     			current=PQueue.pop()
     			currentState=current[0]
     		else:
@@ -226,13 +223,7 @@ def aStarSearch(problem, heuristic=nullHeuristic):
     	else:
     		current=PQueue.pop()
     		currentState=current[0]
-    a=current
-    rout=[]
-    while a!=init:
-    	rout.append(a[1])
-    	a=parentMap[a]
-    rout.reverse()
-    return rout
+    return current[1]
     
 
     util.raiseNotDefined()
