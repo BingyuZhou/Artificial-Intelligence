@@ -74,19 +74,32 @@ class ReflexAgent(Agent):
         newScaredTimes = [ghostState.scaredTimer for ghostState in newGhostStates]
 
         "*** YOUR CODE HERE ***"
-        DisGhostlist = [manhattanDistance(newPos,s.getPosition()) for s in newGhostStates]
-        DisGhost = sum(DisGhostlist)
         
-        """m = len(newFood)
-        n = len(newFood[1])
-        DisFood = 0
-        for i in range(m):
-            for j in range(n):
-            	if newFood[i][j]:
-            		DisFood = DisFood+manhattanDistance(newPos,[i,j])"""
+        DisGhostlist=[]
+        DisFood = 100000
+        score = successorGameState.getScore()
+        reward = score
+        for s in newGhostStates:
+        	if s.scaredTimer == 0:
+        		DisGhostlist.append(manhattanDistance(newPos,s.getPosition()))
+        if DisGhostlist:
+        	DisGhost = min(DisGhostlist)
+        	if DisGhost <=4:
+        		reward = reward+DisGhost
         
-        reward = DisGhost+1/successorGameState.getNumFood()+newScaredTimes[0]
-        return 0
+        FoodList = newFood.asList()
+        for food in FoodList:
+        	dis = manhattanDistance(newPos,food)
+        	if dis<DisFood:
+        		DisFood = dis
+        "only one food left"
+        if DisFood ==0:
+        	reward = reward + 10
+        else:
+        	reward = reward + 1.0/DisFood 
+        
+        return reward
+        
 
 def scoreEvaluationFunction(currentGameState):
     """
@@ -141,7 +154,69 @@ class MinimaxAgent(MultiAgentSearchAgent):
             Returns the total number of agents in the game
         """
         "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+        def maximizer(state,depth):
+            "Pacman agent"
+            
+            #initial state value
+            V = float('-Inf')
+            #possible action of Pacman
+            legalAction = state.getLegalActions(0)
+            #check the search tree is at the end of the depth or not. If it is the end, return state evaluation score
+            if depth == 0 or state.isLose() or state.isWin() or len(legalAction)==0:
+                return self.evaluationFunction(state)
+                
+            #number of agents
+            numAgent = state.getNumAgents()
+            
+            for direction in legalAction:
+                successor = state.generateSuccessor(0,direction)
+                V = max(V,minimizer(successor,depth,numAgent-1,1))
+                
+            return V
+        
+        
+        def minimizer(state,depth,numAgent,indice):
+            "Ghost agent"
+            
+            #initial state value
+            V = float('Inf')
+            #possible action of ghost
+            legalAction = state.getLegalActions(indice)
+            #check the search tree is at the end of the depth or not. If it is the end, return state evaluation score
+            if depth == 0 or state.isLose() or state.isWin() or len(legalAction)==0:
+                return self.evaluationFunction(state)
+            
+            #Tree search
+            for direction in legalAction:
+                successor = state.generateSuccessor(indice,direction)
+                #if agent now is the last ghost, then next we need to consider the action of pacman (maximizer) and one depth has finished
+                #if not, there are extra ghosts we need to analyses"
+                if numAgent == indice:
+                    V = min(V,maximizer(successor,depth-1))
+                else:
+                    V = min(V,minimizer(successor,depth,numAgent,indice+1))
+                    
+            return V
+        
+        
+        
+        #number of agents (pacman and ghosts)
+        numAgent = gameState.getNumAgents()
+        #possible action of pacman"
+        legalAction = gameState.getLegalActions(0)
+        #initial state value of pacman initial state
+        V = float('-Inf')
+        
+        OptAction = []
+        #Tree search
+        for direction in legalAction:
+            val = minimizer(gameState.generateSuccessor(0,direction),self.depth,numAgent-1,1)
+            #find the maximum
+            if val>V:
+                V=val
+                OptAction = direction
+        return OptAction
+                      
 
 class AlphaBetaAgent(MultiAgentSearchAgent):
     """
@@ -153,7 +228,80 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
           Returns the minimax action using self.depth and self.evaluationFunction
         """
         "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+        def maximizer(state,depth,alpha,beta):
+            "Pacman agent"
+            
+            #initial state value
+            V = float('-Inf')
+            #possible action of Pacman
+            legalAction = state.getLegalActions(0)
+            #check the search tree is at the end of the depth or not. If it is the end, return state evaluation score
+            if depth == 0 or state.isLose() or state.isWin() or len(legalAction)==0:
+                return self.evaluationFunction(state)
+                
+            #number of agents
+            numAgent = state.getNumAgents()
+            
+            for direction in legalAction:
+                successor = state.generateSuccessor(0,direction)
+                V = max(V,minimizer(successor,depth,numAgent-1,1,alpha,beta))
+                if V > beta: #Great! we can prune this tree
+                    return V
+                else:#We need to continue go through the tree, meanwhile update the alpha
+                    alpha = max(alpha,V)
+                
+            return V
+        
+        
+        def minimizer(state,depth,numAgent,indice,alpha,beta):
+            "Ghost agent"
+            
+            #initial state value
+            V = float('Inf')
+            #possible action of ghost
+            legalAction = state.getLegalActions(indice)
+            #check the search tree is at the end of the depth or not. If it is the end, return state evaluation score
+            if depth == 0 or state.isLose() or state.isWin() or len(legalAction)==0:
+                return self.evaluationFunction(state)
+            
+            #Tree search
+            for direction in legalAction:
+                successor = state.generateSuccessor(indice,direction)
+                #if agent now is the last ghost, then next we need to consider the action of pacman (maximizer) and one depth has finished
+                #if not, there are extra ghosts we need to analyses"
+                if numAgent == indice:
+                    V = min(V,maximizer(successor,depth-1,alpha,beta))
+                else:
+                    V = min(V,minimizer(successor,depth,numAgent,indice+1,alpha,beta))
+                if V < alpha: #Great! we can prune this tree
+                    return V
+                else: #We need to continue go through the tree, meanwhile update the beta
+                    beta = min(beta,V)
+                    
+            return V
+        
+        
+        
+        #number of agents (pacman and ghosts)
+        numAgent = gameState.getNumAgents()
+        #possible action of pacman"
+        legalAction = gameState.getLegalActions(0)
+        #initial state value of pacman initial state
+        V = float('-Inf')
+        
+        OptAction = []
+        #Tree search
+        for direction in legalAction:
+            #initialization of alpha, beta
+            alpha = V
+            beta = float('Inf')
+            val = minimizer(gameState.generateSuccessor(0,direction),self.depth,numAgent-1,1,alpha,beta)
+            #find the maximum
+            if val>V:
+                V=val
+                OptAction = direction
+        return OptAction
+    
 
 class ExpectimaxAgent(MultiAgentSearchAgent):
     """
@@ -168,7 +316,63 @@ class ExpectimaxAgent(MultiAgentSearchAgent):
           legal moves.
         """
         "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+        def maximizer(state,depth):
+            "Pacman agent"
+            
+            #initial state value
+            V = float('-Inf')
+            #possible action of Pacman
+            legalAction = state.getLegalActions(0)
+            #check the search tree is at the end of the depth or not. If it is the end, return state evaluation score
+            if depth == 0 or state.isLose() or state.isWin() or len(legalAction)==0:
+                return self.evaluationFunction(state)
+                
+            #number of agents
+            numAgent = state.getNumAgents()
+            
+            for direction in legalAction:
+                successor = state.generateSuccessor(0,direction)
+                V = max(V,expectitor(successor,depth,numAgent-1,1))
+                
+            return V
+            
+            
+        def expectitor(state,depth,numAgent,indice):
+            "Expect value of ghost"
+            V = []
+            #possible action of ghost
+            legalAction = state.getLegalActions(indice)
+            #check the search tree is at the end of the depth or not. If it is the end, return state evaluation score
+            if depth == 0 or state.isLose() or state.isWin() or len(legalAction)==0:
+                return self.evaluationFunction(state)
+                
+            for direction in legalAction:
+                successor = state.generateSuccessor(indice,direction)
+                #if agent now is the last ghost, then next we need to consider the action of pacman (maximizer) and one depth has finished
+                #if not, there are extra ghosts we need to analyses"
+                if numAgent == indice:
+                    V.append(maximizer(successor,depth-1))
+                else:
+                    V.append(expectitor(successor,depth,numAgent,indice+1))
+                    
+            return sum(V)/len(V)
+        
+        #number of agents (pacman and ghosts)
+        numAgent = gameState.getNumAgents()
+        #possible action of pacman"
+        legalAction = gameState.getLegalActions(0)
+        #initial state value of pacman initial state
+        V = float('-Inf')
+        
+        OptAction = []
+        #Tree search
+        for direction in legalAction:
+            val = expectitor(gameState.generateSuccessor(0,direction),self.depth,numAgent-1,1)
+            #find the maximum
+            if val>V:
+                V=val
+                OptAction = direction
+        return OptAction
 
 def betterEvaluationFunction(currentGameState):
     """
@@ -178,7 +382,36 @@ def betterEvaluationFunction(currentGameState):
       DESCRIPTION: <write something here so we know what you did>
     """
     "*** YOUR CODE HERE ***"
-    util.raiseNotDefined()
+    PacmanPos = currentGameState.getPacmanPosition()
+    Food = currentGameState.getFood()
+    FoodList = Food.asList()
+    GhostState = currentGameState.getGhostStates()
+    
+    #initialize the reward with score
+    reward = currentGameState.getScore()
+    #nearest ghost distance
+    DisGhostlist = []
+    for s in GhostState:
+        if s.scaredTimer == 0:
+            DisGhostlist.append(manhattanDistance(PacmanPos,s.getPosition()))
+    if DisGhostlist:
+        DisGhost = min(DisGhostlist)
+        if DisGhost <4:
+            reward = reward+DisGhost
+    #nearest food distance
+    DisFood = float("Inf")
+    for food in FoodList:
+        dis = manhattanDistance(PacmanPos,food)
+        if dis<DisFood:
+        		DisFood = dis
+    "only one food left"
+    if DisFood ==0:
+        reward = reward + 20
+    else:
+        reward = reward + 7.0/DisFood 
+    return reward
+    
+    
 
 # Abbreviation
 better = betterEvaluationFunction
